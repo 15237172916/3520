@@ -2,7 +2,7 @@
 
 #VICAP
 #8D1
-himm 0x2003002c  0x5520ff02   # 8D1 div4
+himm 0x2003002c  0x5524ff02  # 8D1 div4
 #2X720P
 #himm 0x2003002c 0x00241102  # 2x720P div2 interlave
 #1X1080P
@@ -14,8 +14,8 @@ himm 0x2003002c  0x5520ff02   # 8D1 div4
 himm 0x20030038  0x2    # PWM  3M
 
 #VO
-#himm 0x20030034 0x00000fc0    # VO crg
-#himm 0x2003003c 0xc           # HDMI need confirm
+himm 0x20030034 0x00000fc0    # VO crg
+himm 0x2003003c 0x7c           # HDMI need confirm
 
 himm 0x20030040 0x802   #VEDU & SED
 himm 0x200300d4 0x8     #SCD 

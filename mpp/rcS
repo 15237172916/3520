@@ -1,0 +1,31 @@
+#! /bin/sh
+
+/bin/mount -a
+
+echo "
+            _ _ _ _ _ _ _ _ _ _ _ _
+            \  _  _   _  _ _ ___
+            / /__/ \ |_/
+           / __   /  -  _ ___
+          / /  / /  / /
+  _ _ _ _/ /  /  \_/  \_ ______
+___________\___\__________________
+"
+for initscript in /etc/init.d/S[0-9][0-9]*
+do
+	if [ -x $initscript ] ;
+	then
+		echo "[RCS]: $initscript"
+		$initscript
+	fi
+done
+
+ifconfig eth0 hw ether 00:AA:BB:CC:DD:EE
+ifconfig eth0 192.168.1.200 netmask 255.255.255.0
+route add default gw 192.168.1.1
+
+#mount -o nolock 192.168.1.253:/home/ubuntu/Work/Hi/3520/Hi3520D_SDK_V1.0.2.2 /mnt
+mount -o nolock 192.168.1.253:/home/ubuntu/Work/Hi/3520/code/ /mnt
+#cd /mnt/ko && ./load.sh
+
+

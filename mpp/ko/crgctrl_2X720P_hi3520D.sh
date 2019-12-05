@@ -14,8 +14,8 @@ himm 0x2003002c 0x00241102  # 2x720P div2 interlave
 himm 0x20030038  0x2    # PWM  3M
 
 #VO
-#himm 0x20030034 0x00000fc0    # VO crg
-#himm 0x2003003c 0x7c           # HDMI need confirm
+himm 0x20030034 0x00000fc0    # VO crg
+himm 0x2003003c 0x7c           # HDMI need confirm
 
 himm 0x20030040 0x802   #VEDU & SED
 himm 0x200300d4 0x8     #SCD 

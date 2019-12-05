@@ -6,6 +6,11 @@
 #        type: 8xd1,8960h
 
 SDK_TYPE=8d1
+#内存和地址单位M
+MEM_ALL=256
+MEM_START=0x800
+MEM_SAMALL_LIN=0x1
+MEM_MODE=0
 
 if [ $# -ge 2 ]; then
     SDK_TYPE=$2
@@ -61,8 +66,28 @@ insert_ko()
        sh ./crgctrl_8D1_hi3520D.sh > /dev/null 
    fi
    
-    #insmod mmz.ko mmz=anonymous,0,0x84000000,187M:jpeg,0,0x8fb00000,5M anony=1 || report_error
-    insmod mmz.ko mmz=anonymous,0,0x84000000,186M:jpeg,0,0x8fa00000,5M anony=1 || report_error
+   	####根据通道模式裁剪fb内存##
+    if [ `sed -n '/Analog-n720PChn/p' /mnt/mtd/Config/HvrMode | sed 's/Analog-n720PChn: //g'` -eq 4 ]; then
+       MEM_MODE=1
+    fi
+    if [ `sed -n '/Analog-n1080NChn/p' /mnt/mtd/Config/HvrMode | sed 's/Analog-n1080NChn: //g'` -eq 4 ]; then
+       MEM_MODE=1
+    fi
+
+    HVRMEM=`cat /proc/cmdline  | awk '{print $1}' | sed s/mem=//`
+    HVRMEM_OS=`echo $HVRMEM | sed s/M//`
+    MEM_LEN=`echo "$MEM_ALL $HVRMEM_OS"|awk '{printf("%d",$1-$2)}'`M
+    MEM_START=`echo "$MEM_START $MEM_SAMALL_LIN $HVRMEM_OS"|awk '{printf("0x%03x00000",$1+$2*$3)}'`
+    echo MEM_START=$MEM_START HVRMEM=$HVRMEM MEM_LEN=$MEM_LEN
+    
+    if [ $HVRMEM = "105M" ];then
+        MEM_MODE=1
+    fi
+    if [ $HVRMEM = "117M" ];then    
+        MEM_MODE=1
+    fi
+
+    insmod mmz.ko mmz=anonymous,0,$MEM_START,$MEM_LEN anony=1 || report_error
     insmod hiuser.ko
     insmod hi3520D_base.ko
     insmod hi3520D_sys.ko
@@ -71,24 +96,38 @@ insert_ko()
     insmod hi3520D_venc.ko
     insmod hi3520D_group.ko
     insmod hi3520D_chnl.ko
-    insmod hi3520D_h264e.ko
+    insmod hi3520D_h264e.ko H264eVBSource=2 H264eMiniBufMode=1  H264eRcnEqualRef=1
     insmod hi3520D_rc.ko
     insmod hi3520D_jpege.ko
-    insmod hi3520D_viu.ko
+    insmod hi3520D_viu.ko detect_err_frame=3
     insmod hi3520D_vou.ko
     insmod hi3520D_vpss.ko
-    insmod hi3520D_ive.ko
     insmod hi3520D_vda.ko
     insmod hi3520D_region.ko
     insmod vcmp.ko
-    insmod hifb.ko video="hifb:vram0_size:8100,vram1_size:1620,vram2_size:1620,vram3_size:32" softcursor="off" u32VcmpBufNum=2
-    insmod hi3520D_vdec.ko
+    if [ $MEM_MODE = "1" ];then
+    	insmod hifb.ko video="hifb:vram0_size:4050,vram2_size:1620,vram3_size:32" softcursor="off" u32VcmpBufNum=2
+   	else
+   		insmod hifb.ko video="hifb:vram0_size:8100,vram2_size:1620,vram3_size:32" softcursor="off" u32VcmpBufNum=2
+   	fi
+    insmod hi3520D_vdec.ko MiniBufMode=1
     insmod hi3520D_vfmw.ko
     insmod hi3520D_hdmi.ko
     insmod jpeg.ko
     
-    insmod extdrv/gpioi2c.ko   
-    #insmod extdrv/cx26828.ko  > /dev/null
+    #insmod extdrv/gpioi2c.ko   
+    #insmod extdrv/fvideo.ko
+    #insmod extdrv/at88sc.ko
+    insmod extdrv/hi_rtc.ko
+    insmod extdrv/hi_ir.ko
+    insmod extdrv/hiwdt.ko
+    #insmod extdrv/usbserial.ko
+    #insmod extdrv/usb-storage.ko
+    #insmod extdrv/usb_wwan.ko
+    #insmod extdrv/option.ko
+    #insmod extdrv/at24c.ko
+    #insmod extdrv/pl2303.ko
+	#insmod extdrv/nvp6134_ex.ko
     insert_audio
     sh ./sysctl_hi3520D.sh > /dev/null
 }
@@ -106,11 +145,9 @@ remove_ko()
     rmmod hi3520D_vpss
     rmmod hi3520D_vou
     rmmod hi3520D_viu
-    rmmod jpeg
     rmmod hi3520D_hdmi.ko
     rmmod hi3520D_vfmw.ko
-    rmmod hi3520D_vdec.ko   
-    rmmod hi3520D_jpege
+    rmmod hi3520D_vdec.ko
     rmmod hi3520D_rc
     rmmod hi3520D_h264e
     rmmod hi3520D_chnl

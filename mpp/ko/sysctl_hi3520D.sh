@@ -8,17 +8,17 @@ himm    0x2011015C       0x03f06    # SATA
 himm    0x20110160       0x03f06    # USB         
 himm    0x20110160       0x03f06    # SFC         
 himm    0x20110184       0x03f06    # IVE         
-himm    0x20110164       0x03f06    # A9          
+himm    0x20110164       0x03f02    # A9         
 himm    0x20110168       0x03f02    # VPSS        
 himm    0x2011016C       0x03f04    # TDE         
 himm    0x20110170       0x03f04    # VCMP        
 himm    0x20110174       0x03f06    # VOIE        
 himm    0x20110178       0x03f06    # AIO         
-himm    0x2011017C       0x10c02    # VEDU        
+himm    0x2011017C       0x13ff1    # VEDU        
 himm    0x20110180       0x03f06    # JPGE        
 himm    0x20110180       0x03f06    # JPGD        
 himm    0x20110184       0x03f06    # MD/ DDR_TEST
-himm    0x20110188       0x10101    # VICAP       
+himm    0x20110188       0x12001    # VICAP      
 himm    0x2011018C       0x10200    # VDP 
 
 #mddrc order control idmap_mode
@@ -26,7 +26,6 @@ himm    0x2011018C       0x10200    # VDP
 himm 0x20110100 0x6b       #mddrc order enable mddrc idmap mode select
 #himm 0x20110020 0x784     #双ddr操作挂死问题规避
 
-himm 0x2005003c 0x0             #0x2005003c:[15]bit,enable MDU not DDRT
 himm 0x200500d8 0x3             #DDR0只使能VICAP和VDP乱序
 
 #outstanding&lowpower

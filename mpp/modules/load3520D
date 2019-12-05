@@ -1,0 +1,179 @@
+#!/bin/sh
+# Useage: ./load [ -r|-i|-a ][type]
+#         -r : rmmod all modules
+#         -i : insmod all modules
+#    default : rmmod all moules and then insmod them
+#        type: 8xd1,8960h
+
+SDK_TYPE=8d1
+#内存和地址单位M
+MEM_ALL=256
+MEM_START=0x800
+MEM_SAMALL_LIN=0x1
+MEM_MODE=0
+
+if [ $# -ge 2 ]; then
+    SDK_TYPE=$2
+fi
+
+
+if [ $SDK_TYPE = "8d1" ]; then
+    echo "SDK_TYPE type is $SDK_TYPE"
+elif [ $SDK_TYPE = "8960h" ]; then
+    echo "SDK_TYPE type is $SDK_TYPE"
+else
+    SDK_TYPE=8d1
+    echo "SDK_TYPE type is $SDK_TYPE"
+fi
+
+report_error()
+{
+    echo "******* Error!! Shell exit for error *****"
+    exit 1
+}
+
+insert_audio()
+{
+    insmod hi3520D_sio.ko
+    insmod hi3520D_ai.ko
+    insmod hi3520D_ao.ko
+    insmod hi3520D_aenc.ko
+    insmod hi3520D_adec.ko
+}
+
+remove_audio()
+{
+    rmmod hi3520D_adec
+    rmmod hi3520D_aenc
+    rmmod hi3520D_ao
+    rmmod hi3520D_ai
+    rmmod hi3520D_sio     
+}
+
+insert_ko()
+{
+   if [ $SDK_TYPE = "8d1" ]; then
+       sh ./pinmux_8D1_hi3520D.sh > /dev/null
+       himm 0x200f0004 0x00000003 > /dev/null
+       himm 0x200f0008 0x00000003 > /dev/null
+       sh ./crgctrl_8D1_hi3520D.sh > /dev/null 
+   fi
+   
+   if [ $SDK_TYPE = "8960h" ]; then
+       sh ./pinmux_8D1_hi3520D.sh > /dev/null
+       himm 0x200f0004 0x00000003 > /dev/null
+       himm 0x200f0008 0x00000003 > /dev/null
+       sh ./crgctrl_8D1_hi3520D.sh > /dev/null 
+   fi
+   
+   	####根据通道模式裁剪fb内存##
+    if [ `sed -n '/Analog-n720PChn/p' /mnt/mtd/Config/HvrMode | sed 's/Analog-n720PChn: //g'` -eq 4 ]; then
+       MEM_MODE=1
+    fi
+    if [ `sed -n '/Analog-n1080NChn/p' /mnt/mtd/Config/HvrMode | sed 's/Analog-n1080NChn: //g'` -eq 4 ]; then
+       MEM_MODE=1
+    fi
+
+    HVRMEM=`cat /proc/cmdline  | awk '{print $1}' | sed s/mem=//`
+    HVRMEM_OS=`echo $HVRMEM | sed s/M//`
+    MEM_LEN=`echo "$MEM_ALL $HVRMEM_OS"|awk '{printf("%d",$1-$2)}'`M
+    MEM_START=`echo "$MEM_START $MEM_SAMALL_LIN $HVRMEM_OS"|awk '{printf("0x%03x00000",$1+$2*$3)}'`
+    echo MEM_START=$MEM_START HVRMEM=$HVRMEM MEM_LEN=$MEM_LEN
+    
+    if [ $HVRMEM = "105M" ];then
+        MEM_MODE=1
+    fi
+    if [ $HVRMEM = "117M" ];then    
+        MEM_MODE=1
+    fi
+
+    insmod mmz.ko mmz=anonymous,0,$MEM_START,$MEM_LEN anony=1 || report_error
+    insmod hiuser.ko
+    insmod hi3520D_base.ko
+    insmod hi3520D_sys.ko
+    insmod hi3520D_tde.ko g_u32TdeTmpBufW=800 g_u32TdeTmpBufH=600
+    insmod hi3520D_dsu.ko
+    insmod hi3520D_venc.ko
+    insmod hi3520D_group.ko
+    insmod hi3520D_chnl.ko
+    insmod hi3520D_h264e.ko H264eVBSource=2 H264eMiniBufMode=1  H264eRcnEqualRef=1
+    insmod hi3520D_rc.ko
+    insmod hi3520D_jpege.ko
+    insmod hi3520D_viu.ko detect_err_frame=3
+    insmod hi3520D_vou.ko
+    insmod hi3520D_vpss.ko
+    insmod hi3520D_vda.ko
+    insmod hi3520D_region.ko
+    insmod vcmp.ko
+    if [ $MEM_MODE = "1" ];then
+    	insmod hifb.ko video="hifb:vram0_size:4050,vram2_size:1620,vram3_size:32" softcursor="off" u32VcmpBufNum=2
+   	else
+   		insmod hifb.ko video="hifb:vram0_size:8100,vram2_size:1620,vram3_size:32" softcursor="off" u32VcmpBufNum=2
+   	fi
+    insmod hi3520D_vdec.ko MiniBufMode=1
+    insmod hi3520D_vfmw.ko
+    insmod hi3520D_hdmi.ko
+    insmod jpeg.ko
+    
+    insmod extdrv/gpioi2c.ko   
+    insmod extdrv/fvideo.ko
+    insmod extdrv/at88sc.ko
+    insmod extdrv/hi_rtc.ko
+    insmod extdrv/hi_ir.ko
+    insmod extdrv/hiwdt.ko
+    insmod extdrv/usbserial.ko
+    insmod extdrv/usb-storage.ko
+    insmod extdrv/usb_wwan.ko
+    insmod extdrv/option.ko
+    insmod extdrv/at24c.ko
+    insmod extdrv/pl2303.ko
+	insmod extdrv/nvp6134_ex.ko
+    insert_audio
+    sh ./sysctl_hi3520D.sh > /dev/null
+}
+
+remove_ko()
+{
+    remove_audio
+    rmmod cx26828.ko
+    rmmod gpioi2c
+    rmmod hifb
+    rmmod vcmp
+    rmmod hi3520D_region
+    rmmod hi3520D_ive
+    rmmod hi3520D_vda
+    rmmod hi3520D_vpss
+    rmmod hi3520D_vou
+    rmmod hi3520D_viu
+    rmmod hi3520D_hdmi.ko
+    rmmod hi3520D_vfmw.ko
+    rmmod hi3520D_vdec.ko
+    rmmod hi3520D_rc
+    rmmod hi3520D_h264e
+    rmmod hi3520D_chnl
+    rmmod hi3520D_group
+    rmmod hi3520D_venc
+    rmmod hi3520D_dsu
+    rmmod hi3520D_tde
+    rmmod hi3520D_sys
+    rmmod hi3520D_base
+    rmmod hiuser
+    rmmod mmz
+}
+
+# load module.
+if [ "$1" = "-i" ]
+then
+    insert_ko
+fi
+
+if [ "$1" = "-r" ]
+then
+    remove_ko
+fi
+
+if [ $# -eq 0 ] || [ "$1" = "-a" ]
+then
+    remove_ko
+    insert_ko
+fi
